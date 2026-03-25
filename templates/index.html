@@ -10,7 +10,6 @@
             background-color: #f4f6f8;
         }
 
-        /* Header */
         .header {
             text-align: center;
             padding: 20px;
@@ -20,7 +19,6 @@
             color: white;
         }
 
-        /* Navbar */
         .navbar {
             display: flex;
             justify-content: center;
@@ -42,7 +40,6 @@
             text-decoration: underline;
         }
 
-        /* Section container */
         .container {
             padding: 30px;
             max-width: 800px;
@@ -58,7 +55,7 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         .checkbox-list {
@@ -77,9 +74,50 @@
             cursor: pointer;
         }
 
-        button.run-btn:hover {
-            background-color: #c40000;
+        button.run-btn:disabled {
+            background-color: gray;
+            cursor: not-allowed;
         }
+
+        /* Loader */
+        .loader-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f1f1f1;
+            border-radius: 5px;
+        }
+
+        .status-item {
+            margin-bottom: 5px;
+        }
+        /* Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(5px);
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+/* Loader box */
+.loader-popup {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    width: 350px;
+    text-align: center;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+}
+
+.loader-popup h3 {
+    margin-bottom: 15px;
+}
     </style>
 </head>
 
@@ -104,7 +142,7 @@
     <div id="amounts" class="card hidden">
         <h3>Select Markets - Capacity</h3>
 
-        <form method="POST" action="/run/amounts">
+        <form method="POST" action="/run/amounts" onsubmit="startLoader('amounts')">
 
             <label>
                 <input type="checkbox" onclick="selectAll(this, 'amounts-list')">
@@ -113,15 +151,21 @@
 
             <div id="amounts-list" class="checkbox-list"></div>
 
-            <button class="run-btn" type="submit">Run Capacity</button>
+            <button id="amountsBtn" class="run-btn" type="submit">Run Capacity</button>
         </form>
+
+        <!-- Loader -->
+        <div id="loader-amounts" class="loader-box hidden">
+            <h4>Processing...</h4>
+            <div id="status-amounts"></div>
+        </div>
     </div>
 
     <!-- Allocation -->
     <div id="allocation" class="card hidden">
         <h3>Select Markets - Allocation</h3>
 
-        <form method="POST" action="/run/allocation">
+        <form method="POST" action="/run/allocation" onsubmit="startLoader('allocation')">
 
             <label>
                 <input type="checkbox" onclick="selectAll(this, 'allocation-list')">
@@ -130,11 +174,17 @@
 
             <div id="allocation-list" class="checkbox-list"></div>
 
-            <button class="run-btn" type="submit">Run Allocation</button>
+            <button id="allocationBtn" class="run-btn" type="submit">Run Allocation</button>
         </form>
+
+        <!-- Loader -->
+        <div id="loader-allocation" class="loader-box hidden">
+            <h4>Processing...</h4>
+            <div id="status-allocation"></div>
+        </div>
     </div>
 
-    <!-- Market Details (empty for now) -->
+    <!-- Market Details -->
     <div id="details" class="card hidden">
         <h3>Market Details</h3>
         <p>Coming soon...</p>
@@ -162,12 +212,43 @@ fetch("/markets")
     });
 });
 
-// Select all logic
+// Select all
 function selectAll(source, containerId) {
     let checkboxes = document.getElementById(containerId).querySelectorAll('input[type="checkbox"]');
     checkboxes.forEach(cb => cb.checked = source.checked);
 }
+
+// Loader
+function startLoader(type) {
+
+    let selected = document.querySelectorAll(`#${type}-list input:checked`);
+    let overlay = document.getElementById("overlay");
+    let statusBox = document.getElementById("status-box");
+    let btn = document.getElementById(`${type}Btn`);
+
+    // 🔥 FORCE SHOW
+    overlay.style.display = "flex";
+
+    statusBox.innerHTML = "";
+    btn.disabled = true;
+
+    if (selected.length === 0) {
+        statusBox.innerHTML = "⏳ Running for ALL markets...";
+    } else {
+        selected.forEach(cb => {
+            let div = document.createElement("div");
+            div.innerHTML = `⏳ ${cb.value} → Processing...`;
+            statusBox.appendChild(div);
+        });
+    }
+}
 </script>
 
 </body>
+<div id="overlay" class="overlay hidden" style="display: none">
+    <div class="loader-popup">
+        <h3>Processing...</h3>
+        <div id="status-box"></div>
+    </div>
+</div>
 </html>

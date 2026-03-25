@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results</title>
+
+    <style>
+        body { font-family: Arial; padding: 20px; }
+
+        .success {
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #e60000;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="success">
+    ✅ {{ type|capitalize }} generated successfully!
+</div>
+
+<a class="btn" href="/download?file={{ file }}">Download Excel</a>
+
+<br><br>
+
+<h3>Preview</h3>
+
+{{ table|safe }}
+
+</body>
+</html>

@@ -17,7 +17,7 @@ from scripts.utils import make_driver
 # ── Config ────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent   # 👈 go up one level
 LOGINS_FILE = BASE_DIR / "data" / "marketlogins.xlsx"
-OUTPUT_FILE = BASE_DIR / "data" / "capacity.xlsx"
+OUTPUT_FILE = BASE_DIR / f"data/capacity_{int(time.time())}.xlsx"
 HEADLESS     = True
 MAX_WORKERS  = 3     # Safe for 15-20 markets — don't go higher on this site
 STAGGER_SEC  = 1    # Seconds between each browser starting up
@@ -108,7 +108,7 @@ def scrape_market(args):
 
         if amount:
             print(f"  OK [{market}] {amount}", flush=True)
-            return {"Market": market, "Capacity": amount, "Error": ""}
+            return {"Market": market, "Capacity": amount}
 
         last_error = error or "Unknown error"
 
@@ -118,7 +118,13 @@ def scrape_market(args):
             break
 
     print(f"  FAIL [{market}] {last_error}", flush=True)
-    return {"Market": market, "Capacity": "ERROR", "Error": last_error}
+    if amount:
+        return {"Market": market, "Capacity": amount}
+
+    # if failed
+    return {"Market": market, "Capacity": "ERROR"}
+
+
 
 def save_results(results, today_label):
     output_path = Path(OUTPUT_FILE)
@@ -143,7 +149,7 @@ def save_results(results, today_label):
             next_row += 1
 
             # Header row
-            headers = ["Market", "Capacity", "Error"]
+            headers = ["Market", "Capacity"]
             for col, h in enumerate(headers, start=1):
                 cell = ws.cell(row=next_row, column=col, value=h)
                 cell.fill = header_fill
@@ -156,10 +162,9 @@ def save_results(results, today_label):
             for r in results:
                 ws.cell(row=next_row, column=1, value=r["Market"])
                 ws.cell(row=next_row, column=2, value=r["Capacity"])
-                ws.cell(row=next_row, column=3, value=r["Error"])
 
                 # Apply borders to row
-                for col in range(1, 4):
+                for col in range(1, 3):
                     ws.cell(row=next_row, column=col).border = border
 
                 next_row += 1
@@ -174,21 +179,29 @@ def save_results(results, today_label):
             ws = writer.sheets['Sheet1']
 
             # Style header
-            for col in range(1, 4):
+            for col in range(1, 3):
                 cell = ws.cell(row=1, column=col)
                 cell.fill = header_fill
                 cell.font = header_font
                 cell.border = border
 
             # Style all cells
-            for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=3):
+            for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=2):
                 for cell in row:
                     cell.border = border
 def run(selected_markets=None):
     logins_df = pd.read_excel(LOGINS_FILE)
     logins_df.columns = logins_df.columns.str.strip()
     if selected_markets:
+        logins_df["Market"] = logins_df["Market"].astype(str).str.strip().str.lower()
+        selected_markets = [m.strip().lower() for m in selected_markets]
+
         logins_df = logins_df[logins_df["Market"].isin(selected_markets)]
+
+        print("Selected markets:", selected_markets)
+        print("Available markets:", logins_df["Market"].tolist())
+    if logins_df.empty:
+        print("⚠ No markets matched!")
 
     rows = [row for _, row in logins_df.iterrows()]
 
@@ -209,7 +222,7 @@ def run(selected_markets=None):
                 results_map[str(market).strip()] = future.result()
             except Exception as e:
                 results_map[str(market).strip()] = {
-                    "Market": market, "Capacity": "ERROR", "Error": str(e)
+                    "Market": market, "Capacity": "ERROR"
                 }
 
     results = [results_map[str(row["Market"]).strip()] for row in rows]
@@ -219,7 +232,7 @@ def run(selected_markets=None):
     mins, secs = divmod(int(elapsed), 60)
     print(f"\nDone in {mins}m {secs}s -- saved to {OUTPUT_FILE}")
 
-    return "data/outputs/capacity.xlsx"
+    return str(OUTPUT_FILE)
 
 if __name__ == "__main__":
     run()
