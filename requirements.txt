@@ -1,0 +1,6 @@
+flask
+selenium
+webdriver-manager
+pandas
+openpyxl
+gunicorn

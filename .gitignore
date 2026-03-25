@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Ignore input files (important for security)
+data/inputs/
+
+# Optional: ignore outputs
+data/outputs/
+
+# OS / IDE junk
+.DS_Store
+.idea/
