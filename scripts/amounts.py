@@ -16,8 +16,8 @@ from scripts.utils import make_driver
 
 # ── Config ────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent   # 👈 go up one level
-LOGINS_FILE = BASE_DIR / "data" / "inputs" / "marketlogins.xlsx"
-OUTPUT_FILE = BASE_DIR / "data" / "outputs" / "capacity.xlsx"
+LOGINS_FILE = BASE_DIR / "data" / "marketlogins.xlsx"
+OUTPUT_FILE = BASE_DIR / "data" / "capacity.xlsx"
 HEADLESS     = True
 MAX_WORKERS  = 3     # Safe for 15-20 markets — don't go higher on this site
 STAGGER_SEC  = 1    # Seconds between each browser starting up
@@ -184,9 +184,12 @@ def save_results(results, today_label):
             for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=3):
                 for cell in row:
                     cell.border = border
-def run():
+def run(selected_markets=None):
     logins_df = pd.read_excel(LOGINS_FILE)
     logins_df.columns = logins_df.columns.str.strip()
+    if selected_markets:
+        logins_df = logins_df[logins_df["Market"].isin(selected_markets)]
+
     rows = [row for _, row in logins_df.iterrows()]
 
     today_label = datetime.now().strftime("%A, %B %d, %Y")

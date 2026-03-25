@@ -1,20 +1,173 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Automation Dashboard</title>
+    <title>Truely Wireless Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f4f6f8;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            background-color: #111;
+            color: white;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: center;
+            background-color: #e60000;
+            padding: 10px;
+            gap: 20px;
+        }
+
+        .navbar a, .navbar button {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .navbar a:hover, .navbar button:hover {
+            text-decoration: underline;
+        }
+
+        /* Section container */
+        .container {
+            padding: 30px;
+            max-width: 800px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .checkbox-list {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        button.run-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #e60000;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button.run-btn:hover {
+            background-color: #c40000;
+        }
+    </style>
 </head>
+
 <body>
-    <h2>Automation Dashboard</h2>
 
-    <button onclick="window.location.href='/run/amounts'">
-        Get Capacity
-    </button>
+<div class="header">
+    TRUELY WIRELESS
+</div>
 
-    <br><br>
+<div class="navbar">
+    <a href="https://www.t-mobiledealerordering.com/" target="_blank">Visit Website</a>
+    <a href="https://www.myrtpos.com/" target="_blank">Visit RTBDI</a>
 
-    <button onclick="window.location.href='/run/allocation'">
-        Get Device Allocation
-    </button>
+    <button onclick="showSection('amounts')">Get Amounts</button>
+    <button onclick="showSection('allocation')">Get Allocation</button>
+    <button onclick="showSection('details')">Market Details</button>
+</div>
+
+<div class="container">
+
+    <!-- Amounts -->
+    <div id="amounts" class="card hidden">
+        <h3>Select Markets - Capacity</h3>
+
+        <form method="POST" action="/run/amounts">
+
+            <label>
+                <input type="checkbox" onclick="selectAll(this, 'amounts-list')">
+                Select All
+            </label>
+
+            <div id="amounts-list" class="checkbox-list"></div>
+
+            <button class="run-btn" type="submit">Run Capacity</button>
+        </form>
+    </div>
+
+    <!-- Allocation -->
+    <div id="allocation" class="card hidden">
+        <h3>Select Markets - Allocation</h3>
+
+        <form method="POST" action="/run/allocation">
+
+            <label>
+                <input type="checkbox" onclick="selectAll(this, 'allocation-list')">
+                Select All
+            </label>
+
+            <div id="allocation-list" class="checkbox-list"></div>
+
+            <button class="run-btn" type="submit">Run Allocation</button>
+        </form>
+    </div>
+
+    <!-- Market Details (empty for now) -->
+    <div id="details" class="card hidden">
+        <h3>Market Details</h3>
+        <p>Coming soon...</p>
+    </div>
+
+</div>
+
+<script>
+function showSection(sectionId) {
+    document.querySelectorAll('.card').forEach(el => el.classList.add('hidden'));
+    document.getElementById(sectionId).classList.remove('hidden');
+}
+
+// Fetch markets
+fetch("/markets")
+.then(res => res.json())
+.then(data => {
+    let amountsDiv = document.getElementById("amounts-list");
+    let allocationDiv = document.getElementById("allocation-list");
+
+    data.markets.forEach(market => {
+        let html = `<label><input type="checkbox" name="markets" value="${market}"> ${market}</label><br>`;
+        amountsDiv.innerHTML += html;
+        allocationDiv.innerHTML += html;
+    });
+});
+
+// Select all logic
+function selectAll(source, containerId) {
+    let checkboxes = document.getElementById(containerId).querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
+</script>
 
 </body>
 </html>
