@@ -48,7 +48,6 @@ def find_element_in_frames(driver, by, selector):
 
 def get_capacity(driver, username, password):
     try:
-        print(f"[DEBUG] Page title: {driver.title}")
         driver.get("https://www.t-mobiledealerordering.com/")
         wait = WebDriverWait(driver, 25)
 
@@ -60,6 +59,8 @@ def get_capacity(driver, username, password):
         wait.until(EC.element_to_be_clickable((By.XPATH, "//a[@name='login']"))).click()
         time.sleep(LOGIN_WAIT)
 
+        print("[DEBUG] Title:", driver.title)
+        print("[DEBUG] URL:", driver.current_url)
         # 🚨 NEW LOGIC: detect password expiry
         page_text = driver.page_source.lower()
         if "password expired" in page_text or "change password" in page_text:

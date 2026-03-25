@@ -2,8 +2,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+import os
 
-def make_driver(headless=True):
+def make_driver(headless=False):
     options = Options()
 
     options.add_argument("--no-sandbox")
@@ -14,8 +15,13 @@ def make_driver(headless=True):
     if headless:
         options.add_argument("--headless=new")
 
+    # 🔥 Detect Render environment
+    if os.environ.get("RENDER"):
+        options.binary_location = "/usr/bin/chromium"
+        return webdriver.Chrome(options=options)
 
-    service = Service(ChromeDriverManager().install())
-
-    driver = webdriver.Chrome(service=service, options=options)
-    return driver
+    # 🔥 Local (Windows / Mac)
+    return webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=options
+    )

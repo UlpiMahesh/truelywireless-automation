@@ -13,7 +13,7 @@ from scripts.utils import make_driver
 
 # ── Config ─────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
-LOGINS_FILE = BASE_DIR / "data" / "directmarketlogins.xlsx"
+LOGINS_FILE = BASE_DIR / "data" / "marketlogins.xlsx"
 OUTPUT_FILE = BASE_DIR / f"data/allocation_{int(time.time())}.xlsx"
 
 HEADLESS = True
