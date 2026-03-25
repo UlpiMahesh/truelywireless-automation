@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import os
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 def make_driver(headless=True):
     options = Options()
@@ -13,7 +14,8 @@ def make_driver(headless=True):
     if headless:
         options.add_argument("--headless=new")
 
-    # 🔥 CRITICAL FOR RENDER
-    options.binary_location = "/usr/bin/chromium"
 
-    return webdriver.Chrome(options=options)
+    service = Service(ChromeDriverManager().install())
+
+    driver = webdriver.Chrome(service=service, options=options)
+    return driver

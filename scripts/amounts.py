@@ -43,11 +43,12 @@ def find_element_in_frames(driver, by, selector):
             driver.switch_to.parent_frame()
         except:
             driver.switch_to.default_content()
-            return None
+            continue
     return None
 
 def get_capacity(driver, username, password):
     try:
+        print(f"[DEBUG] Page title: {driver.title}")
         driver.get("https://www.t-mobiledealerordering.com/")
         wait = WebDriverWait(driver, 25)
 
@@ -65,10 +66,16 @@ def get_capacity(driver, username, password):
             return None, "PASSWORD EXPIRED"
 
         driver.switch_to.default_content()
-        el = find_element_in_frames(driver, By.ID, "credithold-tab-msg")
+        # 🔥 wait for element to appear
+        el = None
+        for _ in range(10):
+            el = find_element_in_frames(driver, By.ID, "credithold-tab-msg")
+            if el:
+                break
+            time.sleep(1)
 
         if not el:
-            return None, "Element not found (login may have failed)"
+            return None, "Element not found after wait"
 
         text = ""
         for _ in range(15):
@@ -78,6 +85,8 @@ def get_capacity(driver, username, password):
             time.sleep(1)
 
         match = re.search(r'\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)', text)
+
+
         if match:
             return f"${match.group(1)}", None
         else:
