@@ -13,17 +13,45 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from openpyxl.styles import Font, PatternFill, Border, Side
 from scripts.utils import make_driver
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+import selenium_stealth
+
+def get_driver():
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.binary_location = "/usr/bin/chromium"  # Render/Docker path
+
+    service = Service("/usr/bin/chromedriver")      # Render/Docker path
+
+    driver = webdriver.Chrome(service=service, options=options)
+
+    selenium_stealth.stealth(
+        driver,
+        languages=["en-US", "en"],
+        vendor="Google Inc.",
+        platform="Win32",
+        webgl_vendor="Intel Inc.",
+        renderer="Intel Iris OpenGL Engine",
+        fix_hairline=True,
+    )
+    return driver
+    return webdriver.Chrome(service=service, options=options)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent   # 👈 go up one level
 LOGINS_FILE = BASE_DIR / "data" / "marketlogins.xlsx"
 OUTPUT_FILE = BASE_DIR / f"data/capacity_{int(time.time())}.xlsx"
-HEADLESS     = True
-MAX_WORKERS  = 3     # Safe for 15-20 markets — don't go higher on this site
-STAGGER_SEC  = 1    # Seconds between each browser starting up
-LOGIN_WAIT   = 3    # Keep at 8s — site is sensitive
+HEADLESS     = False
+MAX_WORKERS  = 3        # Safe for 15-20 markets — don't go higher on this site
+STAGGER_SEC  = 7  # Seconds between each browser starting up
+LOGIN_WAIT   = 8
 RETRY_COUNT  = 1   # Retry once on timeout before marking ERROR
-RETRY_WAIT   = 3   # Wait between retries
+RETRY_WAIT   = 5   # Wait between retries
 # ─────────────────────────────────────────────────────────────────────────────
 
 def find_element_in_frames(driver, by, selector):
@@ -46,7 +74,7 @@ def find_element_in_frames(driver, by, selector):
             continue
     return None
 
-def get_capacity(driver, username, password):
+def get_capacity(driver, username, password,market):
     try:
         driver.get("https://www.t-mobiledealerordering.com/")
         wait = WebDriverWait(driver, 25)
@@ -56,24 +84,29 @@ def get_capacity(driver, username, password):
         terms = wait.until(EC.element_to_be_clickable((By.NAME, "AgreeTerms")))
         if not terms.is_selected():
             terms.click()
+        time.sleep(2)
         wait.until(EC.element_to_be_clickable((By.XPATH, "//a[@name='login']"))).click()
         time.sleep(LOGIN_WAIT)
 
-        print("[DEBUG] Title:", driver.title)
-        print("[DEBUG] URL:", driver.current_url)
         # 🚨 NEW LOGIC: detect password expiry
         page_text = driver.page_source.lower()
+        if any(err in page_text for err in ["idoo runtime error", "runtime error", "an error has occurred"]):
+            driver.quit()  # force clean exit
+            return None, "IDOO RUNTIME ERROR (timeout)"
+
+        # password expiry check (keep your existing one)
         if "password expired" in page_text or "change password" in page_text:
             return None, "PASSWORD EXPIRED"
 
         driver.switch_to.default_content()
         # 🔥 wait for element to appear
         el = None
-        for _ in range(10):
+        for attempt in range(15):  # increased attempts
             el = find_element_in_frames(driver, By.ID, "credithold-tab-msg")
             if el:
                 break
-            time.sleep(1)
+            time.sleep(2)  # wait 2s between tries instead of 1
+            wait.until(lambda d: find_element_in_frames(d, By.ID, "credithold-tab-msg"))
 
         if not el:
             return None, "Element not found after wait"
@@ -93,8 +126,20 @@ def get_capacity(driver, username, password):
         else:
             return None, f"No amount found in: {text[:80]}"
 
+
     except Exception as e:
-        return None, str(e)
+
+        # Save screenshot + page source for failing logins
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        driver.save_screenshot(f"error_{market}_{timestamp}.png")
+
+        with open(f"error_{market}_{timestamp}.html", "w", encoding="utf-8") as f:
+
+            f.write(driver.page_source)
+
+        return None, f"{str(e)} | Screenshot saved"
 
 def scrape_market(args):
     row, stagger_index = args
@@ -112,18 +157,18 @@ def scrape_market(args):
 
         driver = make_driver(headless=HEADLESS)
         try:
-            amount, error = get_capacity(driver, username, password)
+            amount, error = get_capacity(driver, username, password,market)
         finally:
             driver.quit()
 
         if amount:
-            print(f"  OK [{market}] {amount}", flush=True)
             return {"Market": market, "Capacity": amount}
 
         last_error = error or "Unknown error"
 
-        if "408" in last_error or "timeout" in last_error.lower():
-            continue
+        # Retry on timeout-related errors
+        if any(x in last_error.lower() for x in ["idoo runtime error", "timeout", "408", "connection"]):
+            continue  # retry
         else:
             break
 

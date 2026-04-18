@@ -1,9 +1,6 @@
 services:
   - type: web
     name: automation-app
-    env: python
-    buildCommand: |
-      pip install -r requirements.txt
-      apt-get update
-      apt-get install -y chromium chromium-driver
-    startCommand: gunicorn app:app
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
